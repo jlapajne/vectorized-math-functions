@@ -289,7 +289,7 @@ void validateAgainstMathematica() {
     constexpr T Tolerance =
         []() -> std::conditional_t<std::is_same_v<T, double>, double, float> {
         if constexpr (std::is_same_v<T, double>)
-            return 1e-11;
+            return 1e-14;
         return 1e-6f;
     }();
 
@@ -340,7 +340,7 @@ void validateAgainstStd() {
     constexpr T Tolerance =
         []() -> std::conditional_t<std::is_same_v<T, double>, double, float> {
         if constexpr (std::is_same_v<T, double>)
-            return 1e-11;
+            return 1e-14;
         return 1e-6f;
     }();
 
@@ -371,8 +371,8 @@ TEST(TrigonometricTest, Cos) {
 }
 
 TEST(TrigonometricTest, ArcCos) {
-    // validateAgainstStd<float, TestFuncKind::ArcCos>();
-    // validateAgainstStd<double, TestFuncKind::ArcCos>();
+    validateAgainstStd<float, TestFuncKind::ArcCos>();
+    validateAgainstStd<double, TestFuncKind::ArcCos>();
 }
 
 } // namespace trigon::test

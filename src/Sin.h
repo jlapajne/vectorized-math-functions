@@ -24,14 +24,14 @@ inline constexpr static std::array<T, 14> trigonSinCoeffs =
     9.37764779915313579625162444173701470571*1e-21, -3.3185994916985649095153565522258013*1e-23};
 // clang-format on
 
-template <typename T>
+template <typename T, std::uint32_t nExpansionTerms = 14>
 Vec<T> sin(Vec<T> const &x) {
     Vec<T> sum = hw::Set(d<T>, T(0.0));
     Vec<T> xOverPi = hw::Mul(x, hw::Set(d<T>, INVERSE_PI<T>));
 
     Vec<T> T2n = hw::Set(d<T>, T(1.0));
     Vec<T> T2np1 = xOverPi;
-    for (int n = 0; n < 14; n++) {
+    for (std::uint32_t n = 0; n < nExpansionTerms; n++) {
         // Sum over odd chebyshev polynomials.
         Vec<T> coeff = hw::Set(d<T>, trigonSinCoeffs<T>[n]);
         sum = hw::MulAdd(coeff, T2np1, sum);

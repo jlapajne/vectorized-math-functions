@@ -38,7 +38,7 @@ inline Vec<T> cos(Vec<T> const &x) {
     Vec<T> T2n = hw::Set(d<T>, T(1));
     Vec<T> T2np1 = xOverPi;
 
-    for (int n = 1; n < 9; n++) {
+    for (int n = 1; n < trigonCosCoeffs<T>.size(); n++) {
         Vec<T> coeff = hw::Set(d<T>, trigonCosCoeffs<T>[n]);
 
         T2n = chebyshevNext<T>(T2np1, T2n, xOverPi);
@@ -48,15 +48,14 @@ inline Vec<T> cos(Vec<T> const &x) {
     return sum;
 }
 
-// Arccos is define on an interval [-1, 1] and it's image lies in the interval [0, Pi/2].
-
+// Arccos is define on an interval [-1, 1] and it's image lies in the interval [0, Pi].
 template <typename T>
     requires std::is_floating_point_v<T>
 Vec<T> arccos(Vec<T> const &x) {
     // This function is using Taylor series expansion for ArcCos[1-x].
 
     // Coefficients in Taylor expansion.
-    constexpr static std::array<T, 29> coeffs{
+    constexpr static std::array<T, 49> coeffs{
         0.11785113019775792073,        0.026516504294495532165,
         0.0078918167543141464777,      0.0026854098677874526209,
         0.00098871908768538028314,     0.00038344554362157376365,
@@ -71,7 +70,17 @@ Vec<T> arccos(Vec<T> const &x) {
         4.1968966527086710911 * 1e-10, 1.9708640956278602127 * 1e-10,
         9.2785190070637105306 * 1e-11, 4.3783432397265441020 * 1e-11,
         2.0704993536013236334 * 1e-11, 9.8108717804573997353 * 1e-12,
-        4.6574404463334441467 * 1e-12};
+        4.6574404463334441467 * 1e-12, 2.2148292614326118955 * 1e-12,
+        1.0549641169727021074 * 1e-12, 5.0326353128180945484 * 1e-13,
+        2.4042157617205392884 * 1e-13, 1.1500985245485401605 * 1e-13,
+        5.5086711019875248531 * 1e-14, 2.6416677154793676545 * 1e-14,
+        1.2682384915125720929 * 1e-14, 6.0952166052274590076 * 1e-15,
+        2.9323709227842911762 * 1e-15, 1.4121085593438858974 * 1e-15,
+        6.8063798544337609265 * 1e-16, 3.2835539787951105758 * 1e-16,
+        1.5853834199942979090 * 1e-16, 7.6607297663028861550 * 1e-17,
+        3.7045568057927448861 * 1e-17, 1.7927439755008018000 * 1e-17,
+        8.6816588152891572050 * 1e-18, 4.2070431060988318178 * 1e-18,
+        2.0399952888725988752 * 1e-18};
 
     // Get the absolute value of the vector;
     Vec<T> x_abs = hw::AndNot(SignMask<T>, x);
