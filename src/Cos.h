@@ -5,41 +5,48 @@
 #include <hwy/highway.h>
 
 #include <array>
+#include <format>
 #include <immintrin.h>
+#include <string>
 #include <vector>
 
 #include <Polynomials.h>
 
 namespace trigon {
-#pragma clang optimize off
-template <typename T>
-    requires std::is_floating_point_v<T>
-inline static constexpr std::array<T, 12> trigonCosCoeffs = {
-    T(-0.3042421776440938642020349128177049239697),
-    T(-0.9708678652630182194109914323663784757039),
-    T(0.3028491552626994215074191186309676140775),
-    T(-0.02909193396501112114732073920800360778849),
-    T(0.001392243991176231859984622208952274539411),
-    T(-0.00004018994451075494298816526236368837878949),
-    T(7.782767011815306088573057896947073998291 * 1e-7),
-    T(-1.082653034185828481093421492678695775590 * 1e-8),
-    T(1.135109177911507701030194019523024834037 * 1e-10),
-    T(-9.295296632678756552885410084526215786661 * 1e-13),
-    T(6.111364188334767723806229076684641965132 * 1e-15),
-    T(-3.297657841343458986382435554107381460019 * 1e-17)};
 
+/**
+ * Compute cos of the given input x.
+ *
+ * The function assumes that the input satisfies \f$ 0<=x<=2\pi \f$
+ *
+ * @param x Input vector to compute cos(x).
+ */
 template <typename T>
     requires std::is_floating_point_v<T>
 inline Vec<T> cos(Vec<T> const &x) {
 
-    Vec<T> sum = hw::Set(d<T>, T(trigonCosCoeffs<T>[0]));
+    static constexpr std::array<T, 12> coeffs = {
+        T(-0.3042421776440938642020349128177049239697),
+        T(-0.9708678652630182194109914323663784757039),
+        T(0.3028491552626994215074191186309676140775),
+        T(-0.02909193396501112114732073920800360778849),
+        T(0.001392243991176231859984622208952274539411),
+        T(-0.00004018994451075494298816526236368837878949),
+        T(7.782767011815306088573057896947073998291 * 1e-7),
+        T(-1.082653034185828481093421492678695775590 * 1e-8),
+        T(1.135109177911507701030194019523024834037 * 1e-10),
+        T(-9.295296632678756552885410084526215786661 * 1e-13),
+        T(6.111364188334767723806229076684641965132 * 1e-15),
+        T(-3.297657841343458986382435554107381460019 * 1e-17)};
+
+    Vec<T> sum = hw::Set(d<T>, T(coeffs[0]));
     Vec<T> xOverPi = hw::Mul(x, hw::Set(d<T>, INVERSE_PI<T>));
 
     Vec<T> T2n = hw::Set(d<T>, T(1));
     Vec<T> T2np1 = xOverPi;
 
-    for (int n = 1; n < trigonCosCoeffs<T>.size(); n++) {
-        Vec<T> coeff = hw::Set(d<T>, trigonCosCoeffs<T>[n]);
+    for (int n = 1; n < coeffs.size(); n++) {
+        Vec<T> coeff = hw::Set(d<T>, coeffs[n]);
 
         T2n = chebyshevNext<T>(T2np1, T2n, xOverPi);
         T2np1 = chebyshevNext<T>(T2n, T2np1, xOverPi);
@@ -48,9 +55,18 @@ inline Vec<T> cos(Vec<T> const &x) {
     return sum;
 }
 
-// Arccos is define on an interval [-1, 1] and it's image lies in the interval [0, Pi].
-template <typename T>
-    requires std::is_floating_point_v<T>
+/**
+ * Compute ArcCos of the argument.
+ *
+ * Arccos is defined on an interval \f$ [-1, 1] \f$ and it's image lies in the interval \f$[0,
+ * \Pi]\f$. The function assumes that the input is valid. If not valid, no exception is thrown,
+ * but the result is not correct.
+ *
+ * @param x Vector of floats / scalar for which arccos is computed.
+ */
+template <typename T, std::uint32_t ExpansionTermCount = 49>
+    requires(std::is_floating_point_v<T> && 2 <= ExpansionTermCount &&
+             ExpansionTermCount <= 49)
 Vec<T> arccos(Vec<T> const &x) {
     // This function is using Taylor series expansion for ArcCos[1-x].
 
@@ -88,19 +104,12 @@ Vec<T> arccos(Vec<T> const &x) {
 
     Vec<T> t = hw::Sub(hw::Set(d<T>, T(1)), x_abs);
     Vec<T> sqrtt = hw::Sqrt(t);
-
-    std::vector<Vec<T>> powersOfInput;
-    powersOfInput.reserve(coeffs.size());
-    auto *lastPower = &sqrtt;
-    for (auto const &coeff : coeffs) {
-        lastPower = &powersOfInput.emplace_back(hw::Mul(t, *lastPower));
-    }
-
     Vec<T> result = hw::Mul(sqrt2, sqrtt);
 
-    for (std::uint32_t i = 0; i < coeffs.size(); i++) {
-
-        result = hw::MulAdd(hw::Set(d<T>, coeffs[i]), powersOfInput[i], result);
+    auto lastPower = sqrtt;
+    for (std::uint32_t i = 0; i < ExpansionTermCount; i++) {
+        lastPower = hw::Mul(t, lastPower);
+        result = hw::MulAdd(hw::Set(d<T>, coeffs[i]), lastPower, result);
     }
 
     Vec<T> neg_result = hw::Add(hw::Set(d<T>, PI<T>), hw::Xor(result, hw::SignBit(d<T>)));
@@ -108,4 +117,5 @@ Vec<T> arccos(Vec<T> const &x) {
     auto mask = hw::Gt(x, hw::Zero(d<T>));
     return hw::IfThenElse(mask, result, neg_result);
 }
+
 } // namespace trigon

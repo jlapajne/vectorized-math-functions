@@ -9,6 +9,7 @@
 
 #include <Polynomials.h>
 
+#pragma optimize("", off)
 namespace trigon {
 
 // clang-format off
@@ -25,6 +26,7 @@ inline constexpr static std::array<T, 14> trigonSinCoeffs =
 // clang-format on
 
 template <typename T, std::uint32_t nExpansionTerms = 14>
+    requires(2 <= nExpansionTerms && nExpansionTerms <= trigonSinCoeffs<T>.size())
 Vec<T> sin(Vec<T> const &x) {
     Vec<T> sum = hw::Set(d<T>, T(0.0));
     Vec<T> xOverPi = hw::Mul(x, hw::Set(d<T>, INVERSE_PI<T>));
@@ -43,64 +45,109 @@ Vec<T> sin(Vec<T> const &x) {
 }
 
 template <typename T>
-__m128 arcsin(Vec<T> const &x) {
+struct ArcSinPadeSeriesCoeffs {
+    // clang-format off
+    constexpr static std::array<T, 8> nominatorCoeffs{
+        T(-4.02134331227440014268247941231),
+        T(6.64013839618028461107282195693),
+        T(-5.80083406159300799625908304343),
+        T(2.87770102416224398385250178038),
+        T(-0.807703699415387251626727034418),
+        T(0.120037918234026234044753083504),
+        T(-0.00802485128856183220648189624477),
+        T(0.000158745886079939725898992545678)};
+    
+    constexpr static std::array<T, 9> denominatorCoeffs{
+        T(-4.18800997894106680934914607898),
+        T(7.26314005933712907929767963676),
+        T(-6.74189951353813997496465321744),
+        T(3.61319822539326438446745092080),
+        T(-1.12364053678773054096367702728),
+        T(0.192972874306975617965576491510),
+        T(-0.0161688505730104310006288406829),
+        T(0.000495519108487209229203679877131),
+        T(-2.01848846132919200654943379374 * 1e-6)};
+    // clang-format on
+};
+
+template <>
+struct ArcSinPadeSeriesCoeffs<float> {
+    // clang-format ooff
+    inline constexpr static std::array<float, 5> nominatorCoeffs{
+        -2.52049062703774555974805954944f,
+        2.29364992492967237163510606982f,
+        -0.906289894356850270625703003915f,
+        0.145239679370744583225485028826f,
+        -0.00653499178782165635075056473459f};
+
+    inline constexpr static std::array<float, 6> denominatorCoeffs{
+        -2.68715729370441222641472621610f,
+        2.66650947388040774270422710583f,
+        -1.19381420011861112028577924582f,
+        0.233800936921604100138415608015f,
+        -0.0157374465918093307096312958063f,
+        0.000134117645146253114389103579422f};
+    // clang-format on
+};
+
+// ArcSin using pade approximation
+template <typename T>
+    requires(std::is_floating_point_v<T>)
+Vec<T> arcsin(Vec<T> const &x) {
     // This implementation is using the following identity:
     // arcsin(x)=π/2−arcsin(sqrt(1−x^2))
     // This equation divides the definition area into two parts defined by
     //  x = sqrt(1-x^2) -> x = sqrt(2)/2
     // We compute arcsin for -sqrt(2) / 2 <= x <= sqrt(2)/2.
-    // Outside this area we use above identity.
+    // Outside this area we use above identity. For the actual arcsin clculation
+    // we use pade approximation
 
-    Vec<T> ones = hw::Set(d<T>, T(1.0));
-    Vec<T> twos = hw::Set(d<T>, T(2.0));
+    auto const &nominatorCoeffs = ArcSinPadeSeriesCoeffs<T>::nominatorCoeffs;
+    auto const &denominatorCoeffs = ArcSinPadeSeriesCoeffs<T>::denominatorCoeffs;
+
     Vec<T> halfSqrt2 = hw::Set(d<T>, T(0.70710678118654752440));
 
     // Check if any element greater than sqrt(2)/2.
     auto mask1 = hw::Gt(x, halfSqrt2);
     // Check if any element smaller than than -sqrt(2)/2.
-    auto mask2 = hw::Lt(x, hw::BitCast<>(d<T>, hw::Xor(halfSqrt2, SIGNMASK)));
+    auto mask2 = hw::Lt(x, hw::BitCast<>(d<T>, hw::Xor(halfSqrt2, SignMask<T>)));
     // Bitwise or. True for any element smaller than -sqrt(2)/2 or greater than sqrt(2)/2.
     auto combinedMask = hw::Or(mask1, mask2);
+
     // Compute 1-x^2
-    Vec<T> x2 = _hw::Mul(x, x);
-    Vec<T> sqrtt = hw::Sqrt(hw::Sub(ones, x2));
+    Vec<T> x2 = hw::Mul(x, x);
+    Vec<T> minusOne = hw::Set(d<T>, T(-1.0));
+    Vec<T> sqrtt = hw::Sqrt(hw::Mul(minusOne, hw::MulAdd(x, x, minusOne)));
     // This is the effective vector for which we calculate arcsin using taylor expansion.
     Vec<T> xMod = hw::IfThenElse(combinedMask, sqrtt, x);
     Vec<T> x2Mod = hw::Mul(xMod, xMod);
 
-    // Coefficients
-    Vec<T> dn = ones;
-    Vec<T> cn = twos;
+    Vec<T> nominator = xMod;
+    Vec<T> denominator = hw::Set(d<T>, T(1));
 
-    // Argument power.
-    Vec<T> sum = xMod;
-    Vec<T> nextX = hw::Mul(x2Mod, xMod);
-    Vec<T> counter2 = twos;
-    Vec<T> i_vec = hw::Set(d<T>, T(3.0));
+    Vec<T> oddPower = xMod;
+    Vec<T> evenPower = x2Mod;
 
-    // Determine the number of iterations needed
-    auto absValueVec = hw::BitCast(d<T>, hw::AndNot(SIGNMASK, t_mod));
-    T maxElement = hw::MaxOfLanes(absValueVec);
+    for (std::uint32_t i = 0; i < nominatorCoeffs.size(); i++) {
+        oddPower = hw::Mul(oddPower, x2Mod);
+        nominator = hw::MulAdd(hw::Set(d<T>, nominatorCoeffs[i]), oddPower, nominator);
 
-    std::uint32_t maxIter = std::ceil(-5 / std::log10(std::fabs(maxElement)));
-
-    for (int i = 3; i <= maxIter; i += 2) {
-        auto factor = hw::Div(dn, _mm_mul_ps(cn, i_vec));
-        sum = hw::MulAdd(factor, next_t, sum);
-
-        next_t = hw::Mul(next_t, x2Mod);
-        dn = hw::Mul(dn, i_vec);
-
-        counter2 = hw::Add(counter2, twos);
-        cn = hw::Mul(cn, counter2);
-
-        i_vec = hw::Add(i_vec, twos);
+        denominator = hw::MulAdd(hw::Set(d<T>, denominatorCoeffs[i]), evenPower, denominator);
+        evenPower = hw::Mul(evenPower, x2Mod);
     }
-    static const __m128 pi2 = hw::Set(d<T>, PI_2<float>);
-    auto sol1 = hw::Sub(pi2, sum);
-    auto sol2 = hw::Sub(sum, pi2);
 
-    return hw::IfThenElse(mask2, sol2, hw::IfThenElse(mask1, sol1, sum));
+    if constexpr (denominatorCoeffs.size() > nominatorCoeffs.size()) {
+        denominator =
+            hw::MulAdd(hw::Set(d<T>, denominatorCoeffs.back()), evenPower, denominator);
+    }
+
+    Vec<T> arcsinVec = hw::Div(nominator, denominator);
+
+    Vec<T> pi2 = hw::Set(d<T>, PI_2<T>);
+    auto sol1 = hw::Sub(pi2, arcsinVec);
+    auto sol2 = hw::Sub(arcsinVec, pi2);
+
+    return hw::IfThenElse(mask2, sol2, hw::IfThenElse(mask1, sol1, arcsinVec));
 }
 
 } // namespace trigon

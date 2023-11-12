@@ -40,4 +40,14 @@ inline constexpr static T INVERSE_PI = T(0.3183098861837906715377675267450287240
 template <typename T>
 inline static Vec<T> const SignMask = hw::Set(d<T>, T(-0.0));
 
+template <typename T>
+std::string vecToString(Vec<T> const &vec) {
+
+    std::string to_return;
+    for (std::size_t i = 0; i < hw::Lanes(d<T>); i++) {
+        to_return += std::to_string(ExtractLane(vec, i)) + " ";
+    }
+    return to_return;
+}
+
 } // namespace trigon
