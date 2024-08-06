@@ -1,7 +1,7 @@
 {
     "version": 3,
     "configurePresets": [
-        {   
+        { 
             "name": "common_x64",
             "architecture": {
                 "value": "x64",
