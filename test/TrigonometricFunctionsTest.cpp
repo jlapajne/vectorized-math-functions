@@ -158,11 +158,11 @@ void validateAgainstStd() {
     std::cout << std::format("max ulp error = {:g}\n", maxUlpError);
 }
 
-TEST(TrigonometricTest, SinFloat) { validateAgainstStd<float, TestFuncKind::Sin>(); }
-TEST(TrigonometricTest, SinDouble) { validateAgainstStd<double, TestFuncKind::Sin>(); }
+TEST(TrigonometricTest, SinFloatVsStd) { validateAgainstStd<float, TestFuncKind::Sin>(); }
+TEST(TrigonometricTest, SinDoubleVsStd) { validateAgainstStd<double, TestFuncKind::Sin>(); }
 
-TEST(TrigonometricTest, CosFloat) { validateAgainstStd<float, TestFuncKind::Cos>(); }
-TEST(TrigonometricTest, CosDouble) { validateAgainstStd<double, TestFuncKind::Cos>(); }
+TEST(TrigonometricTest, CosFloatVsStd) { validateAgainstStd<float, TestFuncKind::Cos>(); }
+TEST(TrigonometricTest, CosDoubleVsStd) { validateAgainstStd<double, TestFuncKind::Cos>(); }
 
 TEST(TrigonometricTest, ArcCos) {
     validateAgainstStd<float, TestFuncKind::ArcCos>();
