@@ -1,6 +1,9 @@
 add_executable(trigon_test
 TrigonometricFunctionsTest.cpp
-PolynomialsTest.cpp)
+PolynomialsTest.cpp
+TestData.h
+TestCommon.h
+)
 
 target_link_libraries(trigon_test trigon GTest::gtest_main)
 

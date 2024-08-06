@@ -1,80 +1,70 @@
 {
     "version": 3,
     "configurePresets": [
-        {
-            "name": "Debug",
-            "description": "Default build using Ninja generator",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/Debug",
-            "installDir": "${sourceDir}/install/Debug",
+        {   
+            "name": "common_x64",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
-            },
+            }
+        },
+        {
+            "name": "common_x64_debug",
+            "inherits": "common_x64",
+            "binaryDir": "${sourceDir}/build/Debug",
+            "installDir": "${sourceDir}/install/Debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "GTEST_PATH": "c:/libs/gtest/debug/",
                 "GBENCHMARK_PATH": "c:/libs/benchmark/debug/",
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebug",
-                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_CXX_STANDARD": "20"
+            }
+        },
+        {
+            "name": "DebugNinja",
+            "generator": "Ninja",
+            "inherits": "common_x64_debug",
+            "cacheVariables": {
                 "CMAKE_CXX_FLAGS": "-Og -mavx2 -Wno-ignored-attributes -g"
             }
         },
         {
-            "name": "Release",
-            "description": "Default build using Ninja generator",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/Release",
-            "installDir": "${sourceDir}/install/Release",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "GTEST_PATH": "c:/libs/gtest/release/",
-                "GBENCHMARK_PATH": "c:/libs/benchmark/release/",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
-                "CMAKE_CXX_STANDARD": "20",
-                "CMAKE_CXX_FLAGS": "-mavx2 -Wignored-attributes"
-            }
-        },
-        {
             "name": "DebugVS",
-            "description": "Default build using VS generator",
+            "inherits": "common_x64_debug",
             "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/build/DebugVS",
-            "installDir": "${sourceDir}/install/DebugVS",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "GTEST_PATH": "c:/libs/gtest/debug/",
-                "GBENCHMARK_PATH": "c:/libs/benchmark/debug/",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebug",
-                "CMAKE_CXX_STANDARD": "20",
                 "CMAKE_CXX_FLAGS": "/arch:AVX2 /EHa",
                 "VERBOSE": "ON"
             }
         },
+
         {
-            "name": "ReleaseVS",
-            "description": "Default build using VS generator",
-            "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/build/ReleaseVS",
+            "name": "common_x64_release",
+            "inherits": "common_x64",
+            "binaryDir": "${sourceDir}/build/Release",
             "installDir": "${sourceDir}/install/Release",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "GTEST_PATH": "c:/libs/gtest/release/",
                 "GBENCHMARK_PATH": "c:/libs/benchmark/release/",
                 "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded",
-                "CMAKE_CXX_STANDARD": "20",
+                "CMAKE_CXX_STANDARD": "20"
+            }
+        },
+        {
+            "name": "ReleaseNinja",
+            "generator": "Ninja",
+            "inherits": "common_x64_release",
+            "cacheVariables": {
+                "CMAKE_CXX_FLAGS": "-mavx2 -Wignored-attributes"
+            }
+        },
+        {
+            "name": "ReleaseVS",
+            "generator": "Visual Studio 17 2022",
+
+            "cacheVariables": {
                 "CMAKE_CXX_FLAGS": "/arch:AVX2 /EHa",
                 "VERBOSE": "ON"
             }

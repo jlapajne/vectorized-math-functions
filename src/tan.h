@@ -20,37 +20,11 @@ inline constexpr static std::array<T, 12> trigonTanCoeffs =
 // clang-format on
 } // namespace
 
+template <typename T, Approximation A>
+struct TanPadeSeriesCoeffs {};
+
 template <typename T>
-inline Vec<T> tan(Vec<T> const &x) {
-
-    Vec<T> x2 = hw::Mul(x, x);
-    Vec<T> x3 = hw::Mul(x2, x);
-    Vec<T> x4 = hw::Mul(x2, x2);
-    Vec<T> x5 = hw::Mul(x3, x2);
-    Vec<T> x6 = hw::Mul(x3, x3);
-    Vec<T> x7 = hw::Mul(x3, x4);
-    Vec<T> x8 = hw::Mul(x4, x4);
-    Vec<T> x9 = hw::Mul(x4, x5);
-    Vec<T> coeff1 = hw::Mul(T(34459425));
-    Vec<T> numerator =
-        hw::MulSub(x,
-                   coeff1,
-                   hw::MulSub(x3,
-                              hw::Set(d<T>, T(4729725)),
-                              hw::MulSub(x5,
-                                         hw::Set(d<T>, T(135135)),
-                                         hw::MulSub(x7, hw::Set(d<T>, T(990)), x9))));
-
-    Vec<T> denominator =
-        hw::MulSub(x8,
-                   hw::Set(d<T>, T(45)),
-                   hw__MulSub(x6,
-                              hw::Set(d<T>, T(13860)),
-                              hw::MulSub(x4,
-                                         hw::Set(d<T>, T(945945)),
-                                         hw::MulSub(x2, hw::Set(d<T>, T(16216200)), coeff1))));
-    return hw::Div(numerator, denominator);
-}
+inline Vec<T> tan(Vec<T> const &x) {}
 
 template <typename T>
 inline Vec<T> tan_ver2(Vec<T> const &x) {
@@ -72,16 +46,8 @@ inline Vec<T> tan_ver2(Vec<T> const &x) {
     return hw::Div(numerator, denominator);
 }
 
-/**
- *@brief This function calculates tangens of sse vector.  It's an
- *alternative to above function, but it's somehow (unexpectedly)
- *less accurate.
- *@details For detailed documentation on formula used check pdf
- *files discussing trigonometric functions. This is float version
- *and uses sse instructions.
- */
 template <typename T>
-inline __m128 tan_ver3(Vec<T> const &x) {
+inline Vec<T> tan_ver3(Vec<T> const &x) {
     // version 4 S(4,a)
     // this function should calculate tan to 1e-8 precision
     // stevec : 34459425 * a - 4729725 * a ^ 3 + 135135 * a ^ 5 -
@@ -97,7 +63,7 @@ inline __m128 tan_ver3(Vec<T> const &x) {
 
     // imenovalec: 34459425 - 16216200*a^2 + 945945 a^4 - 13860*a^6
     // + 45*a^8
-    __m128 denominator = hw::Add(x2, _mm_set_ps1(45));
+    Vec<T> denominator = hw::Add(x2, _mm_set_ps1(45));
     denominator = hw::MulSub(x, hw::Mul(x, denominator), hw::Set(d<T>, T(13860)));
     denominator = hw::MulAdd(x, hw::Mul(x, denominator), hw::Set(d<T>, T(945945)));
     denominator = hw::MulSub(x, hw::Mul(x, denominator), hw::Set(d<T>, T(16216200)));

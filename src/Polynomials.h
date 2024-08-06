@@ -13,6 +13,14 @@ namespace trigon {
 
 namespace hw = hwy::HWY_NAMESPACE;
 
+/**
+ * Calculate Chebyshev polynomial of degree n at the given x values.
+ *
+ * @param n the degree of the Chebyshev polynomial
+ * @param x the vector of x values
+ *
+ * @return the vector of Chebyshev polynomial values.
+ */
 template <typename T>
 Vec<T> chebyshev(const int &n, Vec<T> const &x) {
     Vec<T> t0 = hw::Set(d<T>, T(1.0));
@@ -45,19 +53,29 @@ Vec<T> chebyshev(const int &n, Vec<T> const &x) {
     return Tnp1;
 }
 
+/**
+ * Calculate the next Chebyshev polynomial value using the given coefficients and input values.
+ *
+ * @param cn the current coefficient vector
+ * @param cn_1 the previous coefficient vector
+ * @param x the input vector
+ *
+ * @return the next Chebyshev polynomial value
+ */
 template <typename T>
 Vec<T> chebyshevNext(Vec<T> const &cn, Vec<T> const &cn_1, Vec<T> const &x) {
     return hw::MulSub(hw::Mul(hw::Set(d<T>, T(2)), cn), x, cn_1);
 }
 
 /**
- * @brief given two consequtive Legendre polynomials, this code
- * calculates next Legendre polynomial
+ * Given two consequtive Legendre polynomials, this code
+ * calculates the next Legendre polynomial
+ * 
  * @param x_vec vector of x values for which the next polynomial is
- * calculated calculated
+ *              calculated calculated
  */
 template <typename T>
-Vec<T> legendre_next(Vec<T> const &Pn, Vec<T> const &Pnm1, Vec<T> const &x, int const n) {
+Vec<T> legendreNext(Vec<T> const &Pn, Vec<T> const &Pnm1, Vec<T> const &x, int const n) {
     Vec<T> n = hw::Set(d<T>, T(n));
     Vec<T> np1 = hw::Set(d<T>, T(n + 1));
     Vec<T> ones = hw::Set(d<T>, T(1));
